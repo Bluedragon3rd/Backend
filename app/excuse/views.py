@@ -67,8 +67,8 @@ class MakeExcuse(APIView):
             print(excuse_text)
             raw_vector = generate_vector(excuse_text).strip()
             # 마크다운 태그 제거 (가장 흔한 에러 원인)
-            if raw_text.startswith("```"):
-                raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+            if raw_vector.startswith("```"):
+                raw_vector = raw_vector.replace("```json", "").replace("```", "").strip()
             print(f"raw_vector :{raw_vector}")
             try :
                 vector_json = json.loads(raw_vector)

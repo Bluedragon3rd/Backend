@@ -6,13 +6,13 @@ from .models import *
 
 # LLM 사용 함수
 client = OpenAI(
-    api_key="up_5qRrJ8sa0Ey0awZAlW4CGsJz3ExtN",
+    api_key=config("UPSTAGE_API_KEY"),
     base_url="https://api.upstage.ai/v1",
 )
 
 MODEL_NAME = "solar-pro3"  # 또는 chat-reasoning
 
-def upstage_chat(messages, temperature=0.6, max_tokens=1024):
+def upstage_chat(messages, temperature=0.6):
     print("--- API 호출 시작 ---") # 디버깅용
     full_content = ""
     try :
@@ -20,13 +20,14 @@ def upstage_chat(messages, temperature=0.6, max_tokens=1024):
             model=MODEL_NAME,
             messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens,
+            #max_tokens=max_tokens,
             stream=True,
+            reasoning_effort='low',
         )
         for chunk in response:
             if chunk.choices[0].delta.content is not None:
                 print(chunk.choices[0].delta.content, end="")
-                full_content += chunk.choices[0].delta.content
+                full_content = full_content+chunk.choices[0].delta.content
         #content = response.choices[0].message.content
         #print(f"--- API 응답 내용: {content} ---") # 여기가 비어있는지 확인
         return full_content.strip()
@@ -97,70 +98,63 @@ def generate_excuse(input_obj):
     return upstage_chat(
         messages,
         temperature=0.6,
-        max_tokens=1024,
+        #max_tokens=1024,
     )
 
 # 벡터 생성 함수
 def generate_vector(excuse_text):
-    system_prompt = """너는 사회적 핑계를 분석하여 수치화하는 평가 모델이다."""
+    system_prompt = """# Role
+    You are an advanced linguistic analyst specializing in semantic quantification. Your task is to analyze the given text (usually an excuse, reason, or statement) and convert it into a 7-dimensional vector based on specific criteria."""
 
     user_prompt = """
-아래에 주어지는 "핑계 텍스트"를 읽고,
-각 항목을 아래에 있는 평가 기준을 바탕으로 0.00 ~ 1.00 사이의 실수로 평가하라. JSON 형식으로 답할 것. (수치 외의 불필요한 말은 하지 말 것.)
 
-출력은 반드시 아래 JSON 구조를 정확히 따를 것.
-
-[핑계 텍스트]
-"{excuse_text}"
-
-출력 형식:
-{{
-  "severity": 0.7,
-  "specificity": 0.3,
-  "verifiability": 0.5,
-  "frequency": 0.1,
-  "truth_plausibility": 0.2,
-  "fatigue": 0.4,
-  "memory_load": 0.5
-}}
-
-
-[평가 기준]
-- severity (심각도):
-  핑계가 다루는 문제의 객관적 심각성
-  (가벼운 개인 사정=0.0, 중대한 사고/질병=1.0)
-
-- specificity (구체성):
-  시간, 장소, 원인, 상황 묘사가 얼마나 구체적인가
-  (모호함=0.0, 매우 구체적=1.0)
-
-- verifiability (검증 가능성):
-  제3자가 사실 여부를 확인할 수 있을 가능성
-  (전혀 불가=0.0, 쉽게 가능=1.0)
-
-- frequency (빈도):
-  이런 핑계가 일반적으로 얼마나 자주 사용되는 유형인가
-  (희귀=0.0, 매우 흔함=1.0)
-
-- truth_plausibility (개연성):
-  실제로 일어났을 법한 이야기인가
-  (억지=0.0, 매우 그럴듯함=1.0)
-
-- fatigue (추궁 피로도):
-  상대가 추가 질문을 하게 될 가능성
-  (추궁 거의 없음=1.0, 질문 많아짐=0.0)
-
-- memory_load (기억 정보량):
-  이후에 동일한 설명을 유지하기 위해 기억해야 할 정보의 양
-  (거의 없음=0.0, 많음=1.0)
-
-규칙:
-- JSON 외의 어떤 텍스트도 출력하지 말 것
-- 모든 값은 반드시 0.0 이상 1.0 이하
-- 소수점 둘째 자리까지
-- 설명 없이 JSON만 출력
-
-"""
+    
+    # Evaluation Criteria (Range: 0.0 to 1.0)
+    Analyze the input text based on the following 7 dimensions. Return a float value between 0.0 and 1.0 for each.
+    
+    1. **severity** (Severity of the situation)
+       - 0.0: Trivial, everyday occurrence (e.g., overslept).
+       - 1.0: Critical, life-altering, or emergency situation (e.g., severe accident, hospitalization).
+    
+    2. **specificity** (Degree of detail)
+       - 0.0: Vague, abstract, or ambiguous.
+       - 1.0: Highly specific, includes proper nouns, numbers, or precise time/location.
+    
+    3. **verifiability** (Ease of fact-checking)
+       - 0.0: Impossible to verify (e.g., "I felt sick").
+       - 1.0: Easily verifiable with tangible proof (e.g., "I have a doctor's note" or public transit delay logs).
+    
+    4. **frequency** (Risk of repetitive/cliché use)
+       - 0.0: Unique, rare, or creative reason.
+       - 1.0: Highly common, cliché, or overused excuse (e.g., "Traffic was bad").
+    
+    5. **truth_plausibility** (Realism/Believability)
+       - 0.0: Absurd, logically inconsistent, or clearly invented.
+       - 1.0: Highly realistic and aligns with common sense.
+    
+    6. **fatigue** (Opponent's questioning fatigue)
+       - 0.0: Invites follow-up questions; the listener becomes curious or suspicious.
+       - 1.0: Shuts down the conversation; makes the listener feel it's rude or unnecessary to ask further (e.g., TMI, emotional distress).
+    
+    7. **memory_load** (Cognitive load to maintain the story)
+       - 0.0: Simple truth or easy lie; no details to remember.
+       - 1.0: Complex fabrication; requires remembering specific fabricated details to avoid contradiction later.
+    
+    # Output Format
+    You must output ONLY a valid JSON object. Do not include any explanation or markdown formatting (like ```json).
+    
+    {
+      "severity": <float>,
+      "specificity": <float>,
+      "verifiability": <float>,
+      "frequency": <float>,
+      "truth_plausibility": <float>,
+      "fatigue": <float>,
+      "memory_load": <float>
+    }
+    
+    #given text
+    """+excuse_text
 
     messages = [
         {"role" : "system", "content" : system_prompt.strip()},
@@ -170,5 +164,5 @@ def generate_vector(excuse_text):
     return upstage_chat(
         messages,
         temperature = 0.4,
-        max_tokens = 1024,
+        #max_tokens = 1024,
     )
