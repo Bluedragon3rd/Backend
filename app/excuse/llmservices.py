@@ -166,3 +166,32 @@ def generate_vector(excuse_text):
         temperature = 0.4,
         #max_tokens = 1024,
     )
+
+def generate_honest(excuse_text, input):
+    system_prompt = """
+너는 거짓말(핑계) 탐지기이다. 주어진 핑계에서 사실 필자의 솔직한 마음이 담긴 솔직한 답변을 얘기해라. 다만, 상대가 기분 나빠하지 않도록.
+"""
+
+    user_prompt = f"""
+다음 핑계 텍스트와 주어진 상황을 바탕으로 솔직한 답변을 이끌어낼 것.
+[given 텍스트] :
+'{excuse_text}'
+[given 상황] :
+'{input}'
+[조건]:
+- 실제로 쓸 수 있는 자연스러운 말투 
+- 상대방이 불쾌하지 않도록
+- 한 문단, 2~6문장 
+- 너무 추상적이지 않게
+"""
+
+    messages = [
+        {"role": "system", "content": system_prompt.strip()},
+        {"role": "user", "content": user_prompt.strip()},
+    ]
+
+    return upstage_chat(
+        messages,
+        temperature=0.6,
+        #max_tokens=1024,
+    )

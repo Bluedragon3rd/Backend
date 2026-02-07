@@ -1,5 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
 import re, json
 
 from .models import *
@@ -115,3 +116,27 @@ class MakeExcuse(APIView):
                 {"error" : "MakeExcuse 중 서버 내부 오류 발생", "detail" : str(e)},
                 status=500,
             )
+
+class MakeHonest(APIView):
+    def get(self, request):
+
+        identifier = request.data.get("id")
+        if not identifier:
+            return Response({"error" : "id 가 필요합니다."} , status = 400)
+        
+        raw_input = get_object_or_404(Input,identifier = identifier)
+        input = (
+            f"상황:{raw_input.situation}, ", 
+            f"창의성:{raw_input.reason}, ",
+            f"본인 상태 :{raw_input.mood}, ",
+            f"대상: {raw_input.target}" )
+        
+        excuse = request.data.get("current_excuse")
+        if not excuse:
+            return Response({"error" : "current_excuse가 필요합니다."}, status = 400)
+        
+        honest = generate_honest(excuse,input)
+
+        return Response({
+            "changed" : honest
+        }, status = 200)
