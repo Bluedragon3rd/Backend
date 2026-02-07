@@ -49,17 +49,27 @@ class MakeExcuse(APIView):
             )
 
             # 핑계 생성(텍스트, 거짓말 레벨, 기억 난이도, 시나리오 3개 반환)
-            text = generate_excuse(input)
+            raw_text = generate_excuse(input).strip() # 앞뒤 공백 제거
+            #print(raw_text)
+            # 마크다운 태그 제거 (가장 흔한 에러 원인)
+            if raw_text.startswith("```"):
+                raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+            #print(text)
             # 응답 파싱
-            results = re.findall(r':(.*?)(?=\n|$)', text)
-
-            excuse_text = results[0]
-            answer1 = results[1]
-            answer2 = results[2]
-            answer3 = results[3]
+            try:
+                excuse_json = json.loads(raw_text)
+                excuse_text = excuse_json["excuse"]
+                responses = excuse_json["responses"]
+            except (json.JSONDecodeError, KeyError):
+                raise ValueError(f"핑계 JSON 파싱 실패:\n{raw_text}")
 
             # Vector S 생성 (LLM)
-            raw_vector = generate_vector(excuse_text)
+            print(excuse_text)
+            raw_vector = generate_vector(excuse_text).strip()
+            # 마크다운 태그 제거 (가장 흔한 에러 원인)
+            if raw_text.startswith("```"):
+                raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+            print(f"raw_vector :{raw_vector}")
             try :
                 vector_json = json.loads(raw_vector)
             except json.JSONDecodeError:
@@ -72,6 +82,7 @@ class MakeExcuse(APIView):
                 verifiability = vector_json["verifiability"],
                 frequency = vector_json["frequency"],
                 truth_plausibility = vector_json["truth_plausibility"],
+                fatigue = vector_json["fatigue"],
                 memory_load = vector_json["memory_load"],
             )
             # Excuse 테이블 create
@@ -81,20 +92,18 @@ class MakeExcuse(APIView):
                 vector = vector
             )
             # 응답 반환하기
-            parse1 = re.search(r'(.*)\s\((.*)\)', answer1)
-            parse2 = re.search(r'(.*)\s\((.*)\)', answer2)
-            parse3 = re.search(r'(.*)\s\((.*)\)', answer3)
+            vector_values = vector_json.values()
+            lie_level = sum(vector_values) / len(vector_values) if vector_values else 0
 
             return Response(
                 {
                     "status" : 200,
                     "excuse" : excuse.text,
-                    "lie_level" : sum(vector_json.values())/len(vector_json),
+                    "lie_level" : round(lie_level,1) * 10,
                     "memory_level" : vector.memory_load * 10,
                     "scenario" : [
-                        {"percent" : parse1.group(2).strip(), "reaction" : parse1.group(1).strip()},
-                        {"percent" : parse2.group(2).strip(), "reaction" : parse2.group(1).strip()},
-                        {"percent" : parse3.group(2).strip(), "reaction" : parse3.group(1).strip()}
+                        {"percent": f"{r['probability']}%", "reaction": r['text']}
+                        for r in responses
                     ]
                 },
                 status = 201
