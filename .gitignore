@@ -25,3 +25,6 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+## migrations
+app/excuse/migrations

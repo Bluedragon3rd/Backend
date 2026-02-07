@@ -31,8 +31,8 @@ class Input(BaseModel):
     identifier = models.CharField(max_length = 20)
     situation = models.CharField(max_length = 50)
     reason = models.IntegerField()
-    mood = models.CharField(choices=MOOD)
-    target = models.CharField(choices=TARGET)
+    mood = models.CharField(max_length = 20, choices=MOOD)
+    target = models.CharField(max_length = 20, choices=TARGET)
 
     def __str__(self):
         return self.identifier
