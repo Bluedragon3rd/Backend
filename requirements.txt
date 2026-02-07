@@ -5,3 +5,4 @@ mysqlclient
 python-decouple
 gunicorn
 whitenoise
+openai
