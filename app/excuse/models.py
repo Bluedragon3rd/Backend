@@ -28,7 +28,7 @@ class Input(BaseModel):
 
 
     id = models.AutoField(primary_key = True)
-    identifier = models.CharField(max_length = 20)
+    identifier = models.CharField(max_length = 20, unique = True)
     situation = models.CharField(max_length = 50)
     reason = models.IntegerField()
     mood = models.CharField(max_length = 20, choices=MOOD)
@@ -60,4 +60,3 @@ class Excuse(BaseModel) : # BaseModel 상속
 
     def __str__(self):
         return self.text
-    
