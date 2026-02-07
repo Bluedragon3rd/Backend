@@ -118,7 +118,7 @@ class MakeExcuse(APIView):
             )
 
 class MakeHonest(APIView):
-    def get(self, request):
+    def post(self, request):
 
         identifier = request.data.get("id")
         if not identifier:
@@ -139,4 +139,4 @@ class MakeHonest(APIView):
 
         return Response({
             "changed" : honest
-        }, status = 200)
+        }, status = 201)
